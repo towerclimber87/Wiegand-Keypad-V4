@@ -985,7 +985,7 @@ sensor:
                   - script.execute: code_clear 
             - if:                            
                 condition:
-                  - lambda: 'return id(Keypad_code).state == $user_3_12_lock_code;'   
+                  - lambda: 'return id(Keypad_code).state == $user_12_lock_code;'   
                   - switch.is_on: code_set_switch    
                   - lambda: 'return id(user_access).state == "Disabled";'                                         
                 then:    
