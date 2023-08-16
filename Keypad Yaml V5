@@ -1,3 +1,13 @@
+substitutions:
+  esphome_name: "keypad-frontdoor"
+  keypad_name: "Keypad Front Door" 
+  apipassword: "asdfasfdasdfasdfasdfasfassfdasf" # API Password  
+  alarm_name: "alarm_control_panel.alarmo"  
+  alarmcode: "4905"       
+  webportal_username: David
+  webportal_password: DDm.3sdf7622asdfasf3  
+  user_lock_code: "1111"
+
 esphome: 
   name: $esphome_name
   platform: ESP32
