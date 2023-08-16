@@ -1,0 +1,2047 @@
+esphome: 
+  name: $esphome_name
+  platform: ESP32
+  board: esp-wrover-kit
+  on_boot:
+    then:
+       - delay: 2s
+       - if:
+           condition:
+              - switch.is_off: door_trigger
+           then: 
+              - lock.lock: locklock   
+       - if:
+           condition:
+              - switch.is_on: door_trigger
+           then: 
+              - lock.unlock: locklock   
+       - lambda: id(relay_time_out).state = id(relay);      
+       - if:                            
+           condition:
+              - lambda: 'return id(master_code) == 0;'  
+           then:  
+              - lambda: id(master_code) = 123456; 
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO16
+
+
+web_server:
+  port: 80
+  auth:
+    username: $webportal_username
+    password: $webportal_password 
+api:
+  encryption:
+    key: $apipassword
+  reboot_timeout: 0s  
+#logger:     
+ota:
+  safe_mode: false
+select:
+  - platform: template
+    name: "(Config) Code Set"
+    id: code_set
+    optimistic: true
+    initial_option: "Select User"
+    options:
+      - Select User
+      - Admin Code
+      - Admin Tag A 
+      - Admin Tag B 
+      - Admin Tag C 
+      - Admin Tag D 
+      - ----------
+      - User 1 Code
+      - User 1 Tag
+      - ----------      
+      - User 2 Code
+      - User 2 Tag
+      - ----------          
+      - User 3 Code
+      - User 3 Tag
+      - ----------                  
+      - User 4 Code
+      - User 4 Tag
+      - ----------          
+      - User 5 Code
+      - User 5 Tag
+      - ----------      
+      - User 6 Code
+      - User 6 Tag
+      - ----------        
+      - User 7 Code
+      - User 7 Tag
+      - ----------            
+      - User 8 Code
+      - User 8 Tag
+      - ----------            
+      - User 9 Code
+      - User 9 Tag     
+      - ----------       
+      - User 10 Code
+      - User 10 Tag    
+      - ----------        
+      - User 11 Code
+      - User 11 Tag
+      - ----------            
+      - User 12 Code  
+      - User 12 Tag                                       
+      - ----------
+      - Master Code
+
+  - platform: template
+    name: "$keypad_name User Access (3-12)"
+    id: user_access
+    optimistic: true
+    initial_option: "Access"
+    options:
+      - Access
+      - Disabled
+
+text_sensor:
+  - platform: template
+    name: "Version"
+    lambda: |-
+      return {"IHA_V2.0esp32E"};   
+
+  - platform: template
+    name: "Assigned Codes/Tag"
+    update_interval: 2s
+    lambda: |-
+      std::string active_sensors;
+      
+      if (id(admin_code_assigned).state) active_sensors += "Admin Code, ";
+      if (id(admin_tag_a_assigned).state) active_sensors += "Admin Tag A, ";
+      if (id(admin_tag_b_assigned).state) active_sensors += "Admin Tag B, ";
+      if (id(admin_tag_c_assigned).state) active_sensors += "Admin Tag C, ";
+      if (id(admin_tag_d_assigned).state) active_sensors += "Admin Tag D, ";
+      
+      if (id(user_1_code_assigned).state) active_sensors += "User 1 Code, ";
+      if (id(user_1_tag_assigned).state) active_sensors += "User 1 Tag, ";
+      if (id(user_2_code_assigned).state) active_sensors += "User 2 Code, ";
+      if (id(user_2_tag_assigned).state) active_sensors += "User 2 Tag, ";
+      if (id(user_3_code_assigned).state) active_sensors += "User 3 Code, ";
+      if (id(user_3_tag_assigned).state) active_sensors += "User 3 Tag, ";
+      if (id(user_4_code_assigned).state) active_sensors += "User 4 Code, ";
+      if (id(user_4_tag_assigned).state) active_sensors += "User 4 Tag, ";
+      if (id(user_5_code_assigned).state) active_sensors += "User 5 Code, ";
+      if (id(user_5_tag_assigned).state) active_sensors += "User 5 Tag, ";
+      if (id(user_6_code_assigned).state) active_sensors += "User 6 Code, ";
+      if (id(user_6_tag_assigned).state) active_sensors += "User 6 Tag, ";
+      if (id(user_7_code_assigned).state) active_sensors += "User 7 Code, ";
+      if (id(user_7_tag_assigned).state) active_sensors += "User 7 Tag, ";
+      if (id(user_8_code_assigned).state) active_sensors += "User 8 Code, ";
+      if (id(user_8_tag_assigned).state) active_sensors += "User 8 Tag, ";
+      if (id(user_9_code_assigned).state) active_sensors += "User 9 Code, ";
+      if (id(user_9_tag_assigned).state) active_sensors += "User 9 Tag, ";
+      if (id(user_10_code_assigned).state) active_sensors += "User 10 Code, ";
+      if (id(user_10_tag_assigned).state) active_sensors += "User 10 Tag, ";
+      if (id(user_11_code_assigned).state) active_sensors += "User 11 Code, ";
+      if (id(user_11_tag_assigned).state) active_sensors += "User 11 Tag, ";
+      if (id(user_12_code_assigned).state) active_sensors += "User 12 Code, ";
+      if (id(user_12_tag_assigned).state) active_sensors += "User 12 Tag, ";
+      
+      if (active_sensors.empty()) {
+        return esphome::optional<std::string>("No active sensors");
+      } else {
+        active_sensors.erase(active_sensors.length() - 2); // Remove the trailing comma and space
+        return esphome::optional<std::string>(active_sensors);
+      }
+
+
+
+
+
+
+
+
+
+
+sensor:
+#  - platform: template
+#    name: "master code"
+#    update_interval: 1s
+#    lambda: |-
+#      return id(master_code);
+#######################  
+  - platform: template
+    id: Keypad_code_master
+    update_interval: never        
+    accuracy_decimals: 0
+    on_value:     
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code_master).state == id(master_code);'
+                    - switch.is_off: code_set_switchb
+                then:  
+                    - switch.turn_on: code_set_switch     
+                    - switch.turn_on: code_set_switchb                         
+
+
+  - platform: template
+    id: Keypad_code 
+    update_interval: never        
+    accuracy_decimals: 0
+    on_value:     
+            - delay: 500ms              
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(admin_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: Admin  $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_1_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'                       
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 1  $keypad_name
+                    - switch.turn_on: all_trigger 
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_2_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 2  $keypad_name
+                    - switch.turn_on: all_trigger      
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_3_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";' 
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 3  $keypad_name
+                    - switch.turn_on: all_trigger                                    
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_4_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 4  $keypad_name
+                    - switch.turn_on: all_trigger 
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_5_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 5  $keypad_name
+                    - switch.turn_on: all_trigger       
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_6_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 6  $keypad_name
+                    - switch.turn_on: all_trigger    
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_7_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 7  $keypad_name
+                    - switch.turn_on: all_trigger                     
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_8_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 8  $keypad_name
+                    - switch.turn_on: all_trigger 
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_9_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 9  $keypad_name
+                    - switch.turn_on: all_trigger 
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_10_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 10  $keypad_name
+                    - switch.turn_on: all_trigger 
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_11_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 11  $keypad_name
+                    - switch.turn_on: all_trigger 
+            - if:                            
+                condition:
+                    - lambda: 'return id(Keypad_code).state == id(user_12_code);'
+                    - lambda: 'return id(Keypad_code).state > 1;'    
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch      
+                then:  
+                    - homeassistant.tag_scanned: User 12  $keypad_name
+                    - switch.turn_on: all_trigger 
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == id(master_code);' 
+                  - switch.is_on: code_set_switchb               
+                  - switch.is_on: code_set_switch            
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_code_master 
+                      state: 000000
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 000000                    
+                  - delay: 1s    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code_master).state > 10000 ;'                  
+                      then:                   
+                       - lambda: id(master_code) = id(Keypad_code_master).state; 
+                  - delay: 1s    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code_master).state > 10000 ;'                  
+                      then:                   
+                       - lambda: id(master_code) = id(Keypad_code_master).state; 
+                  - delay: 1s    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code_master).state > 10000 ;'                  
+                      then:                   
+                       - lambda: id(master_code) = id(Keypad_code_master).state; 
+                  - delay: 1s    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code_master).state > 10000 ;'                  
+                      then:                   
+                       - lambda: id(master_code) = id(Keypad_code_master).state; 
+                  - delay: 1s    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code_master).state > 10000 ;'                  
+                      then:                   
+                       - lambda: id(master_code) = id(Keypad_code_master).state; 
+                  - delay: 1s    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code_master).state > 10000 ;'                  
+                      then:                   
+                       - lambda: id(master_code) = id(Keypad_code_master).state;                                                                                                                       
+                  - delay: 1s
+                  - script.execute: code_clear                     
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 9000;'        
+                  - switch.is_on: code_set_switch            
+                then:                   
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(admin_code) = id(Keypad_code).state;   
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(admin_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear   
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 9001;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                     
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_a) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_a) = id(Keypad_tag).state;    
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_a) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_a) = id(Keypad_tag).state; 
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(admin_tag_a) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear  
+
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 9002;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_b) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_b) = id(Keypad_tag).state;    
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_b) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_b) = id(Keypad_tag).state;  
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(admin_tag_b) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 9003;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_c) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_c) = id(Keypad_tag).state;    
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_c) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_c) = id(Keypad_tag).state;
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(admin_tag_c) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 9004;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_d) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_d) = id(Keypad_tag).state;    
+                  - delay: 1s                    
+                  - lambda: id(admin_tag_d) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(admin_tag_d) = id(Keypad_tag).state;
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(admin_tag_c) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear     
+                                                                       
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1001;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_1_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_1_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear                  
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2001;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_1_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_1_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_1_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_1_tag) = id(Keypad_tag).state;
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_1_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1002;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_2_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_2_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2002;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_2_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_2_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_2_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_2_tag) = id(Keypad_tag).state;   
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_2_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1003;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_3_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_3_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2003;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_3_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_3_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_3_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_3_tag) = id(Keypad_tag).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_3_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1003;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_4_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_4_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear  
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2004;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_4_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_4_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_4_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_4_tag) = id(Keypad_tag).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_4_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear                   
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1005;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_5_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_5_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2005;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_5_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_5_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_5_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_5_tag) = id(Keypad_tag).state;     
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_5_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1005;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_6_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_6_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2006;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_6_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_6_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_6_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_6_tag) = id(Keypad_tag).state;        
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_6_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1007;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_7_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_7_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2007;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_7_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_7_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_7_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_7_tag) = id(Keypad_tag).state;      
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_7_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1008;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_8_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_8_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2008;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_8_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_8_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_8_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_8_tag) = id(Keypad_tag).state;     
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_8_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1009;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_9_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_9_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear  
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2009;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_9_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_9_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_9_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_9_tag) = id(Keypad_tag).state;       
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_9_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1010;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_10_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_10_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2010;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_10_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_10_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_10_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_10_tag) = id(Keypad_tag).state;       
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_10_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1011;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_11_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_11_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2011;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_11_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_11_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_11_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_11_tag) = id(Keypad_tag).state;         
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_11_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1012;'   
+                  - switch.is_on: code_set_switch                                   
+                then:                  
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 0000                      
+                  - delay: 4s
+                  - lambda: id(user_12_code) = id(Keypad_code).state;    
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_12_code) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 2012;'   
+                  - switch.is_on: code_set_switch                                   
+                then:    
+                  - sensor.template.publish:
+                      id: Keypad_tag
+                      state: 000000  
+                  - delay: 1s                    
+                  - lambda: id(user_12_tag) = id(Keypad_tag).state; 
+                  - delay: 1s
+                  - lambda: id(user_12_tag) = id(Keypad_tag).state;   
+                  - delay: 1s                    
+                  - lambda: id(user_12_tag) = id(Keypad_tag).state;
+                  - delay: 1s
+                  - lambda: id(user_12_tag) = id(Keypad_tag).state;     
+                  - if:                            
+                      condition:
+                        - lambda: 'return id(Keypad_code).state == 9999;'   
+                        - switch.is_on: code_set_switch                                   
+                      then:        
+                        - lambda: id(user_12_tag) = 0000;                  
+                  - delay: 1s
+                  - script.execute: code_clear 
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == $user_3_12_lock_code;'   
+                  - switch.is_on: code_set_switch    
+                  - lambda: 'return id(user_access).state == "Disabled";'                                         
+                then:    
+                  - delay: 1s                  
+                  - select.set:
+                        id: user_access
+                        option: "Access"   
+                  - delay: 1s
+                  - script.execute: code_clear    
+            - if:                            
+                condition:
+                  - lambda: 'return id(Keypad_code).state == 1111;'   
+                  - switch.is_on: code_set_switch    
+                  - lambda: 'return id(user_access).state == "Access";'                                         
+                then:    
+                  - delay: 1s                  
+                  - select.set:
+                        id: user_access
+                        option: "Disabled"   
+                  - delay: 1s
+                  - script.execute: code_clear                                                    
+
+  - platform: template
+    id: Keypad_tag
+    accuracy_decimals: 0
+    update_interval: never        
+    on_value:               
+            - if:
+                condition:
+                  - switch.is_off: code_set_switch            
+                  - lambda: 'return id(Keypad_tag).state > 1;'             
+                  - or:                    
+                    - lambda: 'return id(Keypad_tag).state == id(admin_tag_a);' 
+                    - lambda: 'return id(Keypad_tag).state == id(admin_tag_b);' 
+                    - lambda: 'return id(Keypad_tag).state == id(admin_tag_c);' 
+                    - lambda: 'return id(Keypad_tag).state == id(admin_tag_d);'   
+
+                then:  
+                    - homeassistant.tag_scanned: Admin $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_1_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 1 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_2_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 2 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_3_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 3 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_4_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 4 Tag $keypad_name
+                    - switch.turn_on: all_trigger                                            
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_5_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 5 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_6_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 6 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_7_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 7 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_8_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 8 Tag $keypad_name
+                    - switch.turn_on: all_trigger                    
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_9_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 9 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_10_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 10 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_11_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 11 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+            - if:
+                condition:
+                    - lambda: 'return id(Keypad_tag).state == id(user_12_tag);'  
+                    - lambda: 'return id(Keypad_tag).state > 1;'  
+                    - lambda: 'return id(user_access).state == "Access";'                     
+                    - switch.is_off: code_set_switch                                                                                     
+                then:  
+                    - homeassistant.tag_scanned: User 12 Tag $keypad_name
+                    - switch.turn_on: all_trigger
+
+
+number:
+  - platform: template
+    name: Relay Timeout
+    id: relay_time_out
+    optimistic: true
+    mode: slider    
+    min_value: .01   
+    max_value: 10
+    step: .05
+    on_value:
+      - if:      
+          condition:
+            - for:
+               time: 1min
+               condition:
+                 binary_sensor.is_on: keypad_status                  
+          then:  
+            - lambda: id(relay) = id(relay_time_out).state;                
+       
+
+  - platform: template
+    name: Code Set
+    id: code_Tag   
+    optimistic: true
+    min_value: 1000
+    max_value: 999999999
+    mode: box
+    step: 1    
+    on_value:
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag A";' 
+          then:  
+            - lambda: id(admin_tag_a) = id(code_Tag).state;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag B";' 
+          then:  
+            - lambda: id(admin_tag_b) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag C";' 
+          then:  
+            - lambda: id(admin_tag_c) = id(code_Tag).state;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag D";' 
+          then:  
+            - lambda: id(admin_tag_d) = id(code_Tag).state;      
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 1 Tag";' 
+          then:  
+            - lambda: id(user_1_tag) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 2 Tag";' 
+          then:  
+            - lambda: id(user_2_tag) = id(code_Tag).state;                
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 3 Tag";' 
+          then:  
+            - lambda: id(user_3_tag) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 4 Tag";' 
+          then:  
+            - lambda: id(user_4_tag) = id(code_Tag).state; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 5 Tag";' 
+          then:  
+            - lambda: id(user_5_tag) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 6 Tag";' 
+          then:  
+            - lambda: id(user_6_tag) = id(code_Tag).state; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 7 Tag";' 
+          then:  
+            - lambda: id(user_7_tag) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 8 Tag";' 
+          then:  
+            - lambda: id(user_8_tag) = id(code_Tag).state;                
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 9 Tag";' 
+          then:  
+            - lambda: id(user_9_tag) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 10 Tag";' 
+          then:  
+            - lambda: id(user_10_tag) = id(code_Tag).state; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 11 Tag";' 
+          then:  
+            - lambda: id(user_11_tag) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 12 Tag";' 
+          then:  
+            - lambda: id(user_12_tag) = id(code_Tag).state; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Code";' 
+          then:
+            - lambda: id(admin_code) = id(code_Tag).state;           
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 1 Code";' 
+          then:
+            - lambda: id(user_1_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 2 Code";' 
+          then:
+            - lambda: id(user_2_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 3 Code";' 
+          then:
+            - lambda: id(user_3_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 4 Code";' 
+          then:
+            - lambda: id(user_4_code) = id(code_Tag).state;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 5 Code";' 
+          then:
+            - lambda: id(user_5_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 6 Code";' 
+          then:
+            - lambda: id(user_6_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 7 Code";' 
+          then:
+            - lambda: id(user_7_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 8 Code";' 
+          then:
+            - lambda: id(user_8_code) = id(code_Tag).state;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 9 Code";' 
+          then:
+            - lambda: id(user_9_code) = id(code_Tag).state;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 10 Code";' 
+          then:
+            - lambda: id(user_10_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 11 Code";' 
+          then:
+            - lambda: id(user_11_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 12 Code";' 
+          then:
+            - lambda: id(user_12_code) = id(code_Tag).state;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Master Code";' 
+          then:
+            - lambda: id(master_code) = id(code_Tag).state;             
+      - delay: 2min
+      - select.set:
+          id: code_set
+          option: "Select User"  
+ 
+ 
+wiegand:
+  - id: reader
+    d0: 15
+    d1: 14
+    on_key:
+            - lambda: ESP_LOGI("KEY", "received key %d", x);        
+    on_tag:
+            - lambda: ESP_LOGI("TAG", "received tag %s", x.c_str());
+            - sensor.template.publish:
+                id: Keypad_tag 
+                state: !lambda "return parse_number<float>(x).value();"   
+    on_raw:
+            - lambda: ESP_LOGI("RAW", "received raw %d bits, value %llx", bits, value);             
+
+
+key_collector:
+  - id: pin_reader_master
+    source_id: reader
+    min_length: 1
+    max_length: 6
+    end_keys: "#"
+    end_key_required: true
+    back_keys: ""
+    clear_keys: ""
+    timeout: 2s
+    allowed_keys: "0123456789"  # if not included, then any otherwise unused keys will be allowed
+    on_progress:
+            - logger.log:
+                format: "input progress: '%s', started by '%c'"
+                args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ]          
+    on_result:
+            - logger.log:
+                format: "input result: '%s', started by '%c', ended by '%c'"
+                args: [ 'x.c_str()', "(start == 0 ? '~' : start)", "(end == 0 ? '~' : end)" ]
+            - sensor.template.publish:
+                id: Keypad_code_master
+                state: !lambda "return parse_number<float>(x).value();"       
+    on_timeout:
+            - logger.log:
+                format: "input timeout: '%s', started by '%c'"
+                args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ] 
+
+  - id: pin_reader
+    source_id: reader
+    min_length: 4
+    max_length: 6
+    end_keys: "#"
+    end_key_required: true  # default is false
+    back_keys: ""
+    clear_keys: ""
+    timeout: 2s
+    allowed_keys: "0123456789"  # if not included, then any otherwise unused keys will be allowed
+    on_progress:
+            - logger.log:
+                format: "input progress: '%s', started by '%c'"
+                args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ]          
+    on_result:
+            - logger.log:
+                format: "input result: '%s', started by '%c', ended by '%c'"
+                args: [ 'x.c_str()', "(start == 0 ? '~' : start)", "(end == 0 ? '~' : end)" ]
+            - sensor.template.publish:
+                id: Keypad_code 
+                state: !lambda "return parse_number<float>(x).value();"                 
+    on_timeout:
+            - logger.log:
+                format: "input timeout: '%s', started by '%c'"
+                args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ]                
+# ########################################################################
+binary_sensor:
+- platform: template
+  id: admin_code_assigned
+  lambda: |-
+      if (isnan(id(admin_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(admin_code) > 1;
+      }
+- platform: template
+  id: admin_tag_a_assigned
+  lambda: |-
+      if (isnan(id(admin_tag_a))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(admin_tag_a) > 1;
+      }      
+- platform: template
+  id: admin_tag_b_assigned
+  lambda: |-
+      if (isnan(id(admin_tag_b))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(admin_tag_b) > 1;
+      }    
+- platform: template
+  id: admin_tag_c_assigned
+  lambda: |-
+      if (isnan(id(admin_tag_c))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(admin_tag_c) > 1;
+      }  
+- platform: template
+  id: admin_tag_d_assigned
+  lambda: |-
+      if (isnan(id(admin_tag_d))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(admin_tag_d) > 1;
+      }  
+- platform: template
+  id: user_1_code_assigned
+  lambda: |-
+      if (isnan(id(user_1_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_1_code) > 1;
+      }    
+- platform: template
+  id: user_1_tag_assigned
+  lambda: |-
+      if (isnan(id(user_1_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_1_tag) > 1;
+      }  
+- platform: template
+  id: user_2_code_assigned
+  lambda: |-
+      if (isnan(id(user_2_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_2_code) > 1;
+      }    
+- platform: template
+  id: user_2_tag_assigned
+  lambda: |-
+      if (isnan(id(user_2_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_2_tag) > 1;
+      }  
+- platform: template
+  id: user_3_code_assigned
+  lambda: |-
+      if (isnan(id(user_3_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_3_code) > 1;
+      }    
+- platform: template
+  id: user_3_tag_assigned
+  lambda: |-
+      if (isnan(id(user_3_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_3_tag) > 1;
+      }  
+- platform: template
+  id: user_4_code_assigned
+  lambda: |-
+      if (isnan(id(user_4_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_4_code) > 1;
+      }    
+- platform: template
+  id: user_4_tag_assigned
+  lambda: |-
+      if (isnan(id(user_4_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_4_tag) > 1;
+      }  
+
+- platform: template
+  id: user_5_code_assigned
+  lambda: |-
+      if (isnan(id(user_5_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_5_code) > 1;
+      }    
+- platform: template
+  id: user_5_tag_assigned
+  lambda: |-
+      if (isnan(id(user_5_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_5_tag) > 1;
+      }  
+- platform: template
+  id: user_6_code_assigned
+  lambda: |-
+      if (isnan(id(user_6_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_6_code) > 1;
+      }    
+- platform: template
+  id: user_6_tag_assigned
+  lambda: |-
+      if (isnan(id(user_6_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_6_tag) > 1;
+      }  
+- platform: template
+  id: user_7_code_assigned
+  lambda: |-
+      if (isnan(id(user_7_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_7_code) > 1;
+      }    
+- platform: template
+  id: user_7_tag_assigned
+  lambda: |-
+      if (isnan(id(user_7_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_7_tag) > 1;
+      }  
+- platform: template
+  id: user_8_code_assigned
+  lambda: |-
+      if (isnan(id(user_8_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_8_code) > 1;
+      }    
+- platform: template
+  id: user_8_tag_assigned
+  lambda: |-
+      if (isnan(id(user_8_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_8_tag) > 1;
+      }  
+
+- platform: template
+  id: user_9_code_assigned
+  lambda: |-
+      if (isnan(id(user_9_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_9_code) > 1;
+      }    
+- platform: template
+  id: user_9_tag_assigned
+  lambda: |-
+      if (isnan(id(user_9_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_9_tag) > 1;
+      }  
+- platform: template
+  id: user_10_code_assigned
+  lambda: |-
+      if (isnan(id(user_10_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_10_code) > 1;
+      }    
+- platform: template
+  id: user_10_tag_assigned
+  lambda: |-
+      if (isnan(id(user_10_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_10_tag) > 1;
+      }  
+- platform: template
+  id: user_11_code_assigned
+  lambda: |-
+      if (isnan(id(user_11_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_11_code) > 1;
+      }    
+- platform: template
+  id: user_11_tag_assigned
+  lambda: |-
+      if (isnan(id(user_11_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_11_tag) > 1;
+      }  
+- platform: template
+  id: user_12_code_assigned
+  lambda: |-
+      if (isnan(id(user_12_code))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_12_code) > 1;
+      }    
+- platform: template
+  id: user_12_tag_assigned
+  lambda: |-
+      if (isnan(id(user_12_tag))) {
+        return false; // If admin_code is not available, consider it off
+      } else {
+        return id(user_12_tag) > 1;
+      }  
+
+
+
+
+- platform: status
+  id: keypad_status
+  name: $keypad_name Status
+
+- platform: gpio
+  pin:
+    number: GPIO17
+    mode: INPUT_PULLUP
+#  name: $keypad_name Remote
+  filters:
+   - invert:
+  id: lockteset
+  on_press:
+    - switch.turn_on: all_trigger
+
+
+- platform: gpio
+  pin:
+    number: GPIO39
+  filters:
+#   - invert:
+   - delayed_on: 500ms
+  id: link_trigger
+  on_press:
+    - switch.turn_on: all_trigger
+
+lock:
+  - platform: template 
+    optimistic: true    
+    id: locklock
+    name: ${keypad_name} Lock 
+    lambda: |-
+      if (id(door_trigger).state) {
+        return LOCK_STATE_UNLOCKED;
+      } else {
+        return LOCK_STATE_LOCKED;
+      }    
+    on_lock:
+    - switch.turn_off: door_trigger
+    on_unlock:
+    - switch.turn_on: door_trigger
+
+
+switch: 
+- platform: template 
+  id: code_set_switchb
+  optimistic: true
+  on_turn_on:
+    - delay: 10s
+    - switch.turn_off: code_set_switchb
+
+- platform: template 
+  id: code_set_switch
+  optimistic: true
+  on_turn_on:
+    - delay: 10s
+    - switch.turn_off: code_set_switch
+  on_turn_off:   
+    - switch.turn_off: code_set_switchb
+
+
+- platform: restart
+  id: restartunit
+
+- platform: gpio
+  pin:
+    number: GPIO32
+    inverted: false
+  id: alarm_disarm_link
+
+- platform: gpio
+  pin:
+    number: GPIO33
+    inverted: false
+  id: learn
+  on_turn_on:
+     - delay: 100ms
+     - switch.turn_off: learn
+
+- platform: gpio
+  pin:
+    number: GPIO33
+    inverted: false
+  id: clear       
+
+- platform: gpio
+  id: door_trigger
+  pin: 12
+  inverted: false 
+  
+- platform: template
+  id: all_trigger
+  optimistic: true   
+  on_turn_on:
+    - then:
+           - homeassistant.service:
+                service: alarmo.disarm
+                data_template:
+                    entity_id: $alarm_name
+                    code: "$alarmcode"  
+           - switch.turn_on: alarm_disarm_link 
+           - switch.turn_on: door_trigger
+           - delay: !lambda return id(relay) * 1000;      
+           - switch.turn_off: door_trigger           
+           - switch.turn_off: all_trigger
+           - delay: 1s     
+           - switch.turn_off: alarm_disarm_link     
+# ########################################################################
+globals: 
+  - id: relay
+    type: float
+    restore_value: yes  
+
+  - id: master_code
+    type: float
+    restore_value: yes
+
+  - id: admin_code
+    type: float
+    restore_value: yes
+  - id: admin_tag_a
+    type: float
+    restore_value: yes
+  - id: admin_tag_b
+    type: float
+    restore_value: yes
+  - id: admin_tag_c
+    type: float
+    restore_value: yes
+  - id: admin_tag_d
+    type: float
+    restore_value: yes            
+  - id: user_1_code
+    type: float
+    restore_value: yes    
+  - id: user_2_code
+    type: float
+    restore_value: yes  
+  - id: user_3_code
+    type: float
+    restore_value: yes    
+  - id: user_4_code
+    type: float
+    restore_value: yes              
+  - id: user_5_code
+    type: float
+    restore_value: yes    
+  - id: user_6_code
+    type: float
+    restore_value: yes  
+  - id: user_7_code
+    type: float
+    restore_value: yes    
+  - id: user_8_code
+    type: float
+    restore_value: yes
+  - id: user_9_code
+    type: float
+    restore_value: yes    
+  - id: user_10_code
+    type: float
+    restore_value: yes  
+  - id: user_11_code
+    type: float
+    restore_value: yes    
+  - id: user_12_code
+    type: float
+    restore_value: yes
+  - id: user_1_tag
+    type: float
+    restore_value: yes
+  - id: user_2_tag
+    type: float
+    restore_value: yes
+  - id: user_3_tag
+    type: float
+    restore_value: yes
+  - id: user_4_tag
+    type: float
+    restore_value: yes
+  - id: user_5_tag
+    type: float
+    restore_value: yes
+  - id: user_6_tag
+    type: float
+    restore_value: yes
+  - id: user_7_tag
+    type: float
+    restore_value: yes
+  - id: user_8_tag
+    type: float
+    restore_value: yes
+  - id: user_9_tag
+    type: float
+    restore_value: yes
+  - id: user_10_tag
+    type: float
+    restore_value: yes
+  - id: user_11_tag
+    type: float
+    restore_value: yes
+  - id: user_12_tag
+    type: float
+    restore_value: yes
+
+
+
+
+
+button:
+  - platform: template
+    name: Zero Out User Code
+    on_press:
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Code";' 
+          then:  
+            - lambda: id(admin_code) = 0;
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag A";' 
+          then:  
+            - lambda: id(admin_tag_a) = 0;
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag B";' 
+          then:  
+            - lambda: id(admin_tag_b) = 0;
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag C";' 
+          then:  
+            - lambda: id(admin_tag_c) = 0;
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "Admin Tag D";' 
+          then:  
+            - lambda: id(admin_tag_d) = 0;
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 1 Code";' 
+          then:  
+            - lambda: id(user_1_code) = 0; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 2 Code";' 
+          then:  
+            - lambda: id(user_2_code) = 0;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 3 Code";' 
+          then:  
+            - lambda: id(user_3_code) = 0; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 4 Code";' 
+          then:  
+            - lambda: id(user_4_code) = 0;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 5 Code";' 
+          then:  
+            - lambda: id(user_5_code) = 0; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 6 Code";' 
+          then:  
+            - lambda: id(user_6_code) = 0;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 7 Code";' 
+          then:  
+            - lambda: id(user_7_code) = 0; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 8 Code";' 
+          then:  
+            - lambda: id(user_8_code) = 0;    
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 9 Code";' 
+          then:  
+            - lambda: id(user_9_code) = 0; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 10 Code";' 
+          then:  
+            - lambda: id(user_10_code) = 0;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 11 Code";' 
+          then:  
+            - lambda: id(user_11_code) = 0; 
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 12 Code";' 
+          then:  
+            - lambda: id(user_12_code) = 0;                                                   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 1 Tag";' 
+          then:  
+            - lambda: id(user_1_tag) = 0;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 2 Tag";' 
+          then:  
+            - lambda: id(user_2_tag) = 0;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 3 Tag";' 
+          then:  
+            - lambda: id(user_3_tag) = 0;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 4 Tag";' 
+          then:  
+            - lambda: id(user_4_tag) = 0;                                   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 5 Tag";' 
+          then:  
+            - lambda: id(user_5_tag) = 0;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 6 Tag";' 
+          then:  
+            - lambda: id(user_6_tag) = 0;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 7 Tag";' 
+          then:  
+            - lambda: id(user_7_tag) = 0;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 8 Tag";' 
+          then:  
+            - lambda: id(user_8_tag) = 0;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 9 Tag";' 
+          then:  
+            - lambda: id(user_9_tag) = 0;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 10 Tag";' 
+          then:  
+            - lambda: id(user_10_tag) = 0;  
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 11 Tag";' 
+          then:  
+            - lambda: id(user_11_tag) = 0;   
+      - if:
+          condition:
+            - lambda: 'return id(code_set).state == "User 12 Tag";' 
+          then:  
+            - lambda: id(user_12_tag) = 0;  
+
+
+  - platform: template
+    name: $keypad_name (Remote) Learn
+    on_press:
+      - switch.turn_on: learn
+
+  - platform: template
+    name: $keypad_name (Remote) Clear
+    on_press:
+       - delay: 100ms
+       - switch.turn_off: clear   
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+       - delay: 100ms          
+       - switch.turn_on: clear
+       - delay: 100ms
+       - switch.turn_off: clear
+
+
+script:
+  - id: code_clear
+    mode: restart 
+    then:
+                  - sensor.template.publish:
+                      id: Keypad_code
+                      state: 000000 
+                  - sensor.template.publish:
+                      id: Keypad_code_master 
+                      state: 000000  
+                  - sensor.template.publish:
+                      id: Keypad_tag 
+                      state: 000000  
+                  - delay: 500ms                          
+                  - switch.turn_off: code_set_switch                          
